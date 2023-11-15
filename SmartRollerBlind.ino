@@ -1,5 +1,5 @@
-#include <Stepper.h>
-
+#include <Stepper.h> //Biblioteka do obslugi silnika krokowego
+// Piny do obslugi silnika krokowego
 #define motorPin1  8
 #define motorPin2  9
 #define motorPin3  10
@@ -9,12 +9,12 @@ Stepper stepper(200, motorPin1, motorPin3, motorPin2, motorPin4);
 const int sw_out_pin = A0;  // Pin czujnika zew
 
 float sw_out = 0;  // Definicja zmiennej czujnika zew
-float outputDf = 0;  // Definicja wyjścia
+float outputDf = 0;  // Definicja wyjścia algorytmu logiki rozmytej 
 
 // Zmienne czujnik zew
 float jasno_out = 80, srednio_out = 400, ciemno_out = 650;
 
-float swOut[3];  // Moisture membership function
+float swOut[3];  // deklaracja tablicy pod reguly logiki rozmytej
 // Rule Base
 float rule[3];
 float rule0, rule1, rule2;
@@ -24,7 +24,7 @@ String jasnoscOut = "";
 // Ilość kroków aktualnej pozycji rolety
 int currentPosition = 0;
 
-unsigned long lastMeasurementTime = 0;
+unsigned long lastMeasurementTime = 0;//ostatni pomiar
 const unsigned long measurementInterval = 5000;  // Pomiar co 5 sekund
 float Roletagora = 120, RoletaPol = 60, RoletaDol = 120;  // Polozenie rolety
 float a, b;
@@ -40,25 +40,26 @@ void loop() {
 
   if (currentMillis - lastMeasurementTime >= measurementInterval) {
     lastMeasurementTime = currentMillis;  // Zaktualizuj czas ostatniego pomiaru
-    sw_out = readSwOut();
-    deFuzzy();
+    sw_out = readSwOut();// Wykonanie pomiaru
+    deFuzzy();//Wykonanie algorytmu logiki rozmytej 
   }
 
   if (outputDf > 0.0) {
-    int targetPosition = map(outputDf, 0, 100, 0, 9000); // Map outputDf to stepper motor steps (0-200)
-    int stepsToMove = targetPosition - currentPosition;
+    int targetPosition = map(outputDf, 0, 100, 0, 9000); // Zmapowanie silnika pod informacja z wyjscia logiki rozmytej 
+    int stepsToMove = targetPosition - currentPosition;//Sprawdzanie polozenia rolety na podstawie krokow silnika
     currentPosition = targetPosition;
     if (stepsToMove != 0) {
       stepper.step(stepsToMove);
     }
   }
-
+//Opisywanie wynikow na w konsoli serial
   Serial.print(sw_out);
   Serial.print("\t");
   Serial.print(outputDf);
   Serial.println("\t");
   delay(2000);
 }
+
 
 float readSwOut() {
   float WartoscSensor = analogRead(sw_out_pin);
