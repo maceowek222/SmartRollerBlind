@@ -1,5 +1,6 @@
 #include <Stepper.h> //Biblioteka do obslugi silnika krokowego
 // Piny do obslugi silnika krokowego
+
 #define motorPin1  8
 #define motorPin2  9
 #define motorPin3  10
@@ -7,6 +8,7 @@
 Stepper stepper(200, motorPin1, motorPin3, motorPin2, motorPin4);
 
 const int sw_out_pin = A0;  // Pin czujnika zew
+const int buttonPin = 6;
 
 float sw_out = 0;  // Definicja zmiennej czujnika zew
 float outputDf = 0;  // Definicja wyjścia algorytmu logiki rozmytej 
@@ -15,24 +17,29 @@ float outputDf = 0;  // Definicja wyjścia algorytmu logiki rozmytej
 float jasno_out = 80, srednio_out = 400, ciemno_out = 650;
 
 float swOut[3];  // deklaracja tablicy pod reguly logiki rozmytej
-// Rule Base
+
 float rule[3];
 float rule0, rule1, rule2;
-
-String jasnoscOut = "";
 
 // Ilość kroków aktualnej pozycji rolety
 int currentPosition = 0;
 
-unsigned long lastMeasurementTime = 0;//ostatni pomiar
+unsigned long lastMeasurementTime = 0;
 const unsigned long measurementInterval = 5000;  // Pomiar co 5 sekund
-float Roletagora = 120, RoletaPol = 60, RoletaDol = 120;  // Polozenie rolety
+float Roletagora = 120, RoletaPol = 60, RoletaDol = 1;  // Polozenie rolety
 float a, b;
 
 void setup() {
   Serial.begin(9600);
   stepper.setSpeed(100);
   lastMeasurementTime = millis();  // Inicjalizacja czasu ostatniego pomiaru
+
+  // Opuszczanie rolety do momentu naciśnięcia krańcówki
+  pinMode(buttonPin, INPUT);
+  while (digitalRead(buttonPin) == LOW) {
+    stepper.step(-10);
+  }
+
 }
 
 void loop() {
@@ -40,12 +47,12 @@ void loop() {
 
   if (currentMillis - lastMeasurementTime >= measurementInterval) {
     lastMeasurementTime = currentMillis;  // Zaktualizuj czas ostatniego pomiaru
-    sw_out = readSwOut();// Wykonanie pomiaru
+   sw_out = readSwOut();// Wykonanie pomiaru
     deFuzzy();//Wykonanie algorytmu logiki rozmytej 
   }
 
   if (outputDf > 0.0) {
-    int targetPosition = map(outputDf, 0, 100, 0, 9000); // Zmapowanie silnika pod informacja z wyjscia logiki rozmytej 
+    int targetPosition = map(outputDf, 0, 100, 0, 5000); // Zmapowany silnik
     int stepsToMove = targetPosition - currentPosition;//Sprawdzanie polozenia rolety na podstawie krokow silnika
     currentPosition = targetPosition;
     if (stepsToMove != 0) {
@@ -59,7 +66,6 @@ void loop() {
   Serial.println("\t");
   delay(2000);
 }
-
 
 float readSwOut() {
   float WartoscSensor = analogRead(sw_out_pin);
@@ -105,7 +111,7 @@ void reguly() {
 
 void deFuzzy() {
   reguly();
-  a = (rule0 * RoletaPol) + (rule1 * RoletaDol) + (rule2 * Roletagora);
+  a = (rule0 * Roletagora) + (rule1 * RoletaPol) + (rule2 * RoletaDol);
 
   b = rule0 + rule1 + rule2;
   outputDf = a / b;
